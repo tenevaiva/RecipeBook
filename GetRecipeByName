@@ -1,0 +1,32 @@
+[Test, Order(2)]
+        public void Test_GetRecipeByTitle()
+        {
+            // Arragne
+            // Get request for all recipes
+            var expectedCookingTime = 25;
+            var expectedServings = 24;
+            var expectedIngredientsCount = 9;
+            var expectedInstructionsCount = 7;
+            var titleToGet = "Chocolate Chip Cookies";
+
+            var getRequest = new RestRequest("/recipe", Method.Get);
+
+            //Act
+            var response = client.Execute(getRequest);
+
+            //Assert
+            Assert.Multiple(() =>
+            {
+                Assert.That(response.StatusCode, Is.EqualTo(HttpStatusCode.OK), "Response code is not correct");
+                Assert.That(response.Content, Is.Not.Null.Or.Empty, "Response content is not as expected");
+
+                var recipies = JArray.Parse(response.Content);
+                var recipe = recipies.FirstOrDefault(r => r["title"]?.ToString() == titleToGet);
+
+                Assert.That(recipe, Is.Not.Null, $"recipe with title {titleToGet} does not exist");
+                Assert.That(recipe["cookingTime"]?.Value<int>(), Is.EqualTo(expectedCookingTime), "Cooking time is not as expected");
+                Assert.That(recipe["servings"]?.Value<int>(), Is.EqualTo(expectedServings), "Servings property is not as expected");
+                Assert.That(recipe["ingredients"].Count, Is.EqualTo(expectedIngredientsCount), "Ingredients count is not as expected");
+                Assert.That(recipe["instructions"].Count, Is.EqualTo(expectedInstructionsCount), "Instructions count is not as expected");
+            });
+        }
