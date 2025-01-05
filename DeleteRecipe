@@ -1,0 +1,34 @@
+[Test, Order(5)]
+ public void Test_DeleteRecipe()
+ {
+     var getRequest = new RestRequest("recipe", Method.Get);
+     var getResponse = client.Execute(getRequest);
+
+     Assert.That(getResponse.StatusCode, Is.EqualTo(HttpStatusCode.OK), "Failed to retrieve recipes");
+     Assert.That(getResponse.Content, Is.Not.Empty, "Get recipes response content is empty");
+
+     var recipes = JArray.Parse(getResponse.Content);
+     var recipeToDelete = recipes.FirstOrDefault(b => b["title"]?.ToString() == recepyTitle);
+
+     Assert.That(recipeToDelete, Is.Not.Null, "Recipe with title 'Chicken Curry' not found");
+
+     var recipeId = recipeToDelete["_id"].ToString();
+
+     var deleteRequest = new RestRequest("recipe/{id}", Method.Delete);
+     deleteRequest.AddHeader("Authorization", $"Bearer {token}");
+     deleteRequest.AddUrlSegment("id", recipeId);
+
+     var deleteResponse = client.Execute(deleteRequest);
+
+     Assert.Multiple(() =>
+     {
+         Assert.That(deleteResponse.StatusCode, Is.EqualTo(HttpStatusCode.OK), "Expected status code OK");
+
+         var verifyGetRequest = new RestRequest("recipe/{id}", Method.Get);
+         verifyGetRequest.AddUrlSegment("id", recipeId);
+
+         var verifyGetResponse = client.Execute(verifyGetRequest);
+
+         Assert.That(verifyGetResponse.Content, Is.Null.Or.EqualTo("null"), "Verify get response content should be empty");
+     });
+ }
