@@ -1,0 +1,41 @@
+[Test, Order(4)]
+public void Test_UpdateRecipe()
+{
+    var getRequest = new RestRequest("recipe", Method.Get);
+
+    var getResponse = client.Execute(getRequest);
+
+    Assert.That(getResponse.StatusCode, Is.EqualTo(HttpStatusCode.OK), "Failed to retrieve recipes");
+    Assert.That(getResponse.Content, Is.Not.Empty, "Get recipes response content is empty");
+
+    var recipes = JArray.Parse(getResponse.Content);
+    var recipeToUpdate = recipes.FirstOrDefault(b => b["title"]?.ToString() == recepyTitle);
+
+    Assert.That(recipeToUpdate, Is.Not.Null, "Recipe with title 'Spaghetti Carbonara' not found");
+
+    var recipeId = recipeToUpdate["_id"].ToString();
+
+    var updateRequest = new RestRequest("recipe/{id}", Method.Put);
+    updateRequest.AddHeader("Authorization", $"Bearer {token}");
+    updateRequest.AddUrlSegment("id", recipeId);
+    recepyTitle = recepyTitle + "udpated";
+    var servings = 30;
+    updateRequest.AddJsonBody(new
+    {
+        title = recepyTitle,
+        servings
+    });
+
+    var updateResponse = client.Execute(updateRequest);
+
+    Assert.Multiple(() =>
+    {
+        Assert.That(updateResponse.StatusCode, Is.EqualTo(HttpStatusCode.OK), "Expected status code OK (200)");
+        Assert.That(updateResponse.Content, Is.Not.Empty, "Update response content should not be empty");
+
+        var content = JObject.Parse(updateResponse.Content);
+
+        Assert.That(content["title"]?.ToString(), Is.EqualTo(recepyTitle), "Recipe title should match the updated value");
+        Assert.That(content["servings"]?.Value<int>(), Is.EqualTo(servings), "Recipe servings should match the updated value");
+    });
+}
