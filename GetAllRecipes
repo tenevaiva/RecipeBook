@@ -1,0 +1,33 @@
+[Test, Order(1)]
+public void Test_GetAllRecipes()
+{
+    //Arrange
+    var request = new RestRequest("/recipe", Method.Get);
+
+    //Act
+    var response = client.Execute(request);
+
+    //Assert
+    Assert.Multiple(() =>
+    {
+        Assert.That(response.StatusCode, Is.EqualTo(HttpStatusCode.OK), "The response does not have the correct code");
+        Assert.That(response.Content, Is.Not.Null.Or.Empty, "The response body/content is not as expected");
+
+        var recipies = JArray.Parse(response.Content);
+
+        Assert.That(recipies.Type, Is.EqualTo(JTokenType.Array), "The response content is not an array");
+        Assert.That(recipies.Count, Is.GreaterThan(0), "Recipies count is below 1");
+
+        foreach(var recipe in recipies)
+        {
+            Assert.That(recipe["title"]?.ToString(), Is.Not.Null.Or.Empty, "Title is not as expected");
+            Assert.That(recipe["ingredients"], Is.Not.Null.Or.Empty, "Ingredients property is not as exepected");
+            Assert.That(recipe["instructions"], Is.Not.Null.Or.Empty, "Ingredients Property is not as expected");
+            Assert.That(recipe["cookingTime"], Is.Not.Null.Or.Empty, "CookingTime property is not as expected");
+            Assert.That(recipe["servings"], Is.Not.Null.Or.Empty, "Servings property is not as expected");
+            Assert.That(recipe["category"], Is.Not.Null.Or.Empty, "Category property is not as expected");
+            Assert.That(recipe["ingredients"]?.Type, Is.EqualTo(JTokenType.Array), "Ingredients Propertydoes not have the correct type");
+            Assert.That(recipe["instructions"]?.Type, Is.EqualTo(JTokenType.Array), "Instructions property does not have the correct type");
+        }
+    });
+} 
