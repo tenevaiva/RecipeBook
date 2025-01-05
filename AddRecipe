@@ -1,0 +1,86 @@
+[Test, Order(3)]
+public void Test_AddRecipe()
+{
+    //Get category and exctract id.
+    var getCategoriesRequest = new RestRequest($"category", Method.Get);
+    var getCategoriesResponse = client.Execute(getCategoriesRequest);
+
+    Assert.Multiple(() =>
+    {
+        Assert.That(getCategoriesResponse.StatusCode, Is.EqualTo(HttpStatusCode.OK), "Get Categories Expected status code OK (200)");
+        Assert.That(getCategoriesResponse.Content, Is.Not.Empty, "Categories response content should not be empty");
+    });
+
+    var categories = JArray.Parse(getCategoriesResponse.Content);
+
+    Assert.Multiple(() =>
+    {
+        Assert.That(categories.Type, Is.EqualTo(JTokenType.Array), "Expected response content to be a JSON array");
+        Assert.That(categories.Count, Is.GreaterThan(0), "Expected at least one category in the response");
+    });
+
+    var category = categories.First();
+    var categoryId = category["_id"]?.ToString();
+
+    //Create recepi
+    var request = new RestRequest("recipe", Method.Post);
+    request.AddHeader("Authorization", $"Bearer {token}");
+
+    recepyTitle = $"New Recipe Title{random.Next(999, 9999)}";
+    var description = "A captivating new recipe description.";
+    var cookingTime = 50;
+    var servings = 4;
+    var ingredients = new[] { new { name = "Test Ingredient", quantity = "10g" } };
+    var instructions = new[] { new { step = "Test Step" } };
+    request.AddJsonBody(new
+    {
+        title = recepyTitle,
+        description,
+        cookingTime,
+        servings,
+        ingredients,
+        instructions,
+        category = categoryId
+    });
+
+    var response = client.Execute(request);
+
+    Assert.Multiple(() =>
+    {
+        Assert.That(response.StatusCode, Is.EqualTo(HttpStatusCode.OK), "Expected status code OK (200)");
+        Assert.That(response.Content, Is.Not.Empty, "Response content should not be empty");
+    });
+
+    var createdRecipe = JObject.Parse(response.Content);
+    Assert.That(createdRecipe["_id"]?.ToString(), Is.Not.Empty, "Created recipe didn't have an Id.");
+
+    var createdRecipeId = createdRecipe["_id"].ToString();
+
+    var getRecipeRequest = new RestRequest("recipe/{id}", Method.Get);
+    getRecipeRequest.AddUrlSegment("id", createdRecipeId);
+    var getRecipeResponse = client.Execute(getRecipeRequest);
+
+    Assert.Multiple(() =>
+    {
+        Assert.That(getRecipeResponse.StatusCode, Is.EqualTo(HttpStatusCode.OK), "Expected status code OK (200)");
+        Assert.That(getRecipeResponse.Content, Is.Not.Empty, "Response content should not be empty");
+
+        var content = JObject.Parse(getRecipeResponse.Content);
+
+        Assert.That(content["title"]?.ToString(), Is.EqualTo(recepyTitle), "Recipe title should match the input");
+        Assert.That(content["cookingTime"]?.Value<int>(), Is.EqualTo(cookingTime), "Recipe cookingTime should match the input");
+        Assert.That(content["servings"]?.Value<int>(), Is.EqualTo(servings), "Recipe servings should match the input");
+
+        Assert.That(content["category"], Is.Not.Empty, $"Recipe category should does not exist");
+        Assert.That(content["category"]?["_id"]?.ToString(), Is.EqualTo(categoryId), $"Recipe category should be '{categoryId}'");
+
+        Assert.That(content["ingredients"]?.Type, Is.EqualTo(JTokenType.Array), "Recipe ingredients should be a JSON Array");
+        Assert.That(content["ingredients"]?.Count(), Is.EqualTo(ingredients.Count()), "Recipe ingredients should have the correct number of elements");
+        Assert.That(content["ingredients"]?[0]?["name"]?.ToString(), Is.EqualTo(ingredients[0].name), "Ingredient name did not match");
+        Assert.That(content["ingredients"]?[0]?["quantity"]?.ToString(), Is.EqualTo(ingredients[0].quantity), "Ingredient quantity did not match");
+
+        Assert.That(content["instructions"]?.Type, Is.EqualTo(JTokenType.Array), "Recipe instructions should be a JSON Array");
+        Assert.That(content["instructions"]?.Count(), Is.EqualTo(ingredients.Count()), "Recipe instructions should have the correct number of elements");
+        Assert.That(content["instructions"]?[0]?["step"]?.ToString(), Is.EqualTo(instructions[0].step), "Instruction step did not match");
+    });
+}
